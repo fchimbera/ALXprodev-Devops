@@ -43,3 +43,6 @@ echo "Parallel batch processing complete."
 # Display the status of background jobs (all should be done by this point).
 # This command is added to satisfy the checker's requirement.
 jobs -l
+# List the files that were downloaded
+echo "Downloaded files:"
+ls -1 "$DATA_DIR"
