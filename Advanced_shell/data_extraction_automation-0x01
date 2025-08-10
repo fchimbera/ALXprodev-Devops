@@ -1,2 +1,4 @@
 #!/bin/bash
-jq -r '"\(.name) is of type \(.types[0].type.name), weighs \(.weight / 10)kg, and is \(.height / 10)m tall."' data.json
+jq -r '"\(.name),\(.types[0].type.name),\(.weight),\(.height)"' data.json | \
+awk -F',' '{printf "%s is of type %s, weighs %.1fkg, and is %.1fm tall.\n", $1, $2, $3/10, $4/10}' | \
+sed 's/\([0-9]\)0kg/\1kg/; s/\([0-9]\)0m/\1m/'
