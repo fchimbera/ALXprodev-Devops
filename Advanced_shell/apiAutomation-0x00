@@ -1,0 +1,19 @@
+#!/bin/bash
+API_URL="https://pokeapi.co/api/v2/pokemon/pikachu"
+DATA_FILE="data.json"
+ERROR_FILE="errors.txt"
+
+curl -sS -o "$DATA_FILE" "$API_URL"
+if [ $? -eq 0 ]; then
+    echo "Successfully retrieved Pikachu data and saved it to $DATA_FILE."
+    if [ -f "$ERROR_FILE" ]; then
+        rm "$ERROR_FILE"
+    fi
+else
+    curl -sS "$API_URL" > /dev/null 2> "$ERROR_FILE"
+    
+    if [ -f "$DATA_FILE" ]; then
+        rm "$DATA_FILE"
+    fi
+    echo "Failed to retrieve data. Check $ERROR_FILE for details."
+fi
