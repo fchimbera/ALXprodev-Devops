@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to fetch data for multiple Pokémon and save to separate files.
+# Script to fetch data for multiple Pokémon with error handling and retry logic.
 # List of Pokémon to retrieve data for.
 POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
@@ -9,9 +9,16 @@ API_URL="https://pokeapi.co/api/v2/pokemon"
 
 # Directory to store the JSON files.
 DATA_DIR="pokemon_data"
+ERROR_LOG="error.log"
+MAX_RETRIES=3
 
-# Create the directory if it doesn't exist.
+# Create the data directory if it doesn't exist.
 mkdir -p "$DATA_DIR"
+
+# Clear previous error log.
+> "$ERROR_LOG"
+
+echo "Starting batch data retrieval with retry logic..."
 
 # Loop through each Pokémon in the list.
 for pokemon in "${POKEMON_LIST[@]}"; do
@@ -19,23 +26,43 @@ for pokemon in "${POKEMON_LIST[@]}"; do
 
     # Define the full URL for the current Pokémon.
     URL="$API_URL/$pokemon"
-
+    
     # Define the output file path.
     OUTPUT_FILE="$DATA_DIR/$pokemon.json"
+    
+    # Initialize retry counter.
+    retry_count=0
+    success=false
 
-    # Make the API request and save the output to the file.
-    # The -s flag makes the curl command silent.
-    curl -s -o "$OUTPUT_FILE" "$URL"
+    # Retry loop: attempt to fetch data up to MAX_RETRIES times.
+    while [ $retry_count -lt $MAX_RETRIES ]; do
+        # Make the API request and save the output.
+        # -s: silent mode.
+        # -S: show errors from curl itself.
+        # -o: write output to file.
+        curl -sS -o "$OUTPUT_FILE" "$URL"
 
-    # Check the exit status of the curl command.
-    if [ $? -eq 0 ]; then
-        echo "Saved data to $OUTPUT_FILE ✅"
-    else
-        echo "Failed to fetch data for $pokemon. Please check the API URL and your internet connection."
+        # Check the exit status of the curl command.
+        if [ $? -eq 0 ]; then
+            echo "Saved data to $OUTPUT_FILE ✅"
+            success=true
+            break # Exit the while loop on success
+        else
+            # If the request fails, increment the retry count and log the attempt.
+            ((retry_count++))
+            echo "Attempt $retry_count of $MAX_RETRIES failed for $pokemon. Retrying..."
+            sleep 2 # Add a delay before retrying
+        fi
+    done
+
+    # If the loop finishes without success, log the final error and move on.
+    if [ "$success" = false ]; then
+        echo "Failed to fetch data for $pokemon after $MAX_RETRIES attempts. Skipping..."
+        echo "$(date): Failed to fetch $pokemon data." >> "$ERROR_LOG"
+        # Optional: remove the incomplete file
+        rm -f "$OUTPUT_FILE"
     fi
 
-    # Add a delay to prevent hitting the API's rate limit.
-    sleep 1
 done
 
-echo "Batch processing complete."
+echo "Batch processing complete. Check $ERROR_LOG for any errors."
