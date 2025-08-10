@@ -1,8 +1,7 @@
 #!/bin/bash
-
 # Script to fetch data for multiple Pokémon in parallel.
-# List of Pokémon to retrieve data for.
 
+# List of Pokémon to retrieve data for.
 POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
 # Base URL for the Pokémon API.
@@ -17,7 +16,6 @@ mkdir -p "$DATA_DIR"
 echo "Starting parallel data retrieval..."
 
 # Loop through each Pokémon and start a background process for each.
-PIDS=()
 for pokemon in "${POKEMON_LIST[@]}"; do
     echo "Fetching data for $pokemon..."
     
@@ -29,14 +27,16 @@ for pokemon in "${POKEMON_LIST[@]}"; do
     
     # Make the API request in the background using the '&' symbol.
     curl -s -o "$OUTPUT_FILE" "$URL" &
-    PIDS+=($!)
 done
 
-# Wait for all background processes to complete.
-echo "All requests have been initiated. Waiting for all processes to finish..."
-for pid in "${PIDS[@]}"; do
-    wait "$pid"
+# Wait until all jobs have finished.
+while jobs | grep -q "Running"; do
+    sleep 1
 done
+
+# Kill any remaining jobs as a safety measure.
+# This ensures no stray processes are left behind.
+jobs -p | xargs -r kill
 
 echo "Parallel batch processing complete."
 
